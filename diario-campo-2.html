@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a2e1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Diário Campo">
+<title>Diário de Campo</title>
+
+<!-- ═══════════════════════════════
+     MANIFEST INLINE — PWA sem arquivo externo
+════════════════════════════════ -->
+<script>
+(function(){
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#1a2e1a"/><text x="256" y="340" font-size="280" text-anchor="middle" fill="#c49a2a">&#x1F33E;</text><rect x="60" y="390" width="392" height="6" rx="3" fill="#5a9e4a" opacity=".6"/></svg>`;
+  const ico='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));
+  const m={name:'Diário de Campo',short_name:'DiárioCampo',description:'Registro agronômico de campo',start_url:'.',display:'standalone',orientation:'portrait',background_color:'#1a2e1a',theme_color:'#1a2e1a',icons:[{src:ico,sizes:'192x192',type:'image/svg+xml',purpose:'any maskable'},{src:ico,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]};
+  const b=new Blob([JSON.stringify(m)],{type:'application/manifest+json'});
+  const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(b);document.head.appendChild(l);
+  const a=document.createElement('link');a.rel='apple-touch-icon';a.href=ico;document.head.appendChild(a);
+})();
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root{
+  --vd:#1a2e1a; --vm:#2d4f2d; --vc:#3d6b3d; --vv:#5a9e4a;
+  --tr:#8b6914; --tc:#c49a2a; --pa:#e8d5a0; --cr:#f5edd8;
+  --cz:#4a5540; --ln:rgba(90,158,74,.22); --r:7px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--vd);color:var(--cr);font-family:'DM Mono',monospace;overflow:hidden;}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--vd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;transition:opacity .5s;}
+#splash .st{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,13vw,5.5rem);letter-spacing:.08em;color:var(--tc);line-height:1;text-shadow:0 4px 24px rgba(196,154,42,.3);}
+#splash .ss{font-size:.7rem;letter-spacing:.3em;color:var(--vv);text-transform:uppercase;}
+#splash .sb{margin-top:40px;width:140px;height:3px;background:var(--vc);border-radius:99px;overflow:hidden;position:relative;}
+#splash .sf{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--tc);border-radius:99px;animation:sl 1.7s ease forwards;}
+@keyframes sl{to{width:100%;}}
+
+/* APP */
+#app{display:flex;flex-direction:column;height:100svh;opacity:0;transition:opacity .4s;}
+#app.vis{opacity:1;}
+
+/* HEADER */
+header{background:var(--vd);border-bottom:1px solid var(--ln);padding:13px 16px 10px;flex-shrink:0;z-index:10;display:flex;align-items:center;justify-content:space-between;}
+.app-title{font-family:'Bebas Neue',sans-serif;font-size:1.65rem;letter-spacing:.08em;color:var(--tc);line-height:1;}
+.app-title small{font-family:'DM Mono',monospace;font-size:.58rem;display:block;letter-spacing:.2em;color:var(--vv);margin-top:1px;}
+.today-badge{font-size:.6rem;letter-spacing:.12em;background:var(--vc);color:var(--pa);padding:4px 10px;border-radius:4px;text-transform:uppercase;flex-shrink:0;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--ln);background:var(--vd);flex-shrink:0;}
+.tb{flex:1;padding:10px 4px 8px;background:none;border:none;border-bottom:2px solid transparent;color:var(--cz);font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.tb svg{opacity:.5;transition:opacity .2s;}
+.tb.on{color:var(--tc);border-bottom-color:var(--tc);}
+.tb.on svg{opacity:1;}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+.panel{display:none;min-height:100%;}
+.panel.on{display:block;}
+
+/* FORM */
+.fsec{padding:15px;max-width:520px;margin:0 auto;}
+.lbl{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--vv);margin-bottom:5px;}
+.fg{margin-bottom:13px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.fi,.fa,.fs{width:100%;background:var(--vm);border:1px solid var(--vc);border-radius:var(--r);color:var(--cr);font-family:'DM Mono',monospace;font-size:.78rem;padding:9px 11px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none;color-scheme:dark;}
+.fi:focus,.fa:focus,.fs:focus{border-color:var(--tc);}
+.fa{resize:none;min-height:88px;line-height:1.55;}
+.fs{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a9e4a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;cursor:pointer;}
+.fs option{background:var(--vd);}
+
+/* CHIPS */
+.chips{display:flex;gap:7px;flex-wrap:wrap;}
+.chip{padding:5px 11px;border-radius:20px;border:1px solid var(--vc);background:none;color:var(--cz);font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;transition:all .15s;}
+.chip.on{background:var(--vc);color:var(--pa);}
+
+/* BTN SALVAR */
+.bts{width:100%;padding:13px;background:var(--tr);border:none;border-radius:var(--r);color:var(--pa);font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:.12em;cursor:pointer;margin-top:6px;transition:background .2s,transform .1s;}
+.bts:active{transform:scale(.98);background:var(--tc);}
+
+/* HOJE */
+.hoje-hd{padding:16px 16px 10px;border-bottom:1px solid var(--ln);}
+.hoje-dt{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;color:var(--tc);letter-spacing:.06em;}
+.hoje-sub{font-size:.62rem;letter-spacing:.2em;color:var(--vv);text-transform:uppercase;margin-top:1px;}
+.empty{padding:56px 24px;text-align:center;}
+.empty .ei{font-size:2.8rem;opacity:.35;margin-bottom:14px;}
+.empty p{font-size:.72rem;color:var(--cz);line-height:1.75;letter-spacing:.06em;}
+
+/* CARDS */
+.clist{padding:11px 15px;display:flex;flex-direction:column;gap:9px;max-width:520px;margin:0 auto;}
+.card{background:var(--vm);border:1px solid var(--vc);border-radius:var(--r);padding:13px;position:relative;animation:ci .25s ease;}
+@keyframes ci{from{opacity:0;transform:translateY(7px);}}
+.card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;}
+.ctipo{font-size:.55rem;letter-spacing:.22em;text-transform:uppercase;color:var(--tc);background:rgba(139,105,20,.18);padding:3px 7px;border-radius:3px;}
+.chora{font-size:.6rem;color:var(--cz);letter-spacing:.1em;}
+.ctalhao{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.06em;color:var(--pa);margin-bottom:4px;}
+.cdesc{font-family:'Crimson Pro',serif;font-size:.92rem;color:var(--cr);line-height:1.55;margin-bottom:7px;}
+.cmeta{display:flex;gap:9px;flex-wrap:wrap;font-size:.58rem;color:var(--cz);letter-spacing:.08em;}
+.cmeta span{display:flex;align-items:center;gap:3px;}
+
+/* BTN EXCLUIR nos cards */
+.cdel{
+  position:absolute;top:9px;right:9px;
+  background:rgba(224,90,90,.12);border:1px solid rgba(224,90,90,.3);border-radius:4px;
+  color:#e05a5a;font-size:.68rem;cursor:pointer;padding:3px 8px;
+  font-family:'DM Mono',monospace;letter-spacing:.05em;
+  opacity:0;transition:opacity .2s;
+}
+.card:hover .cdel{opacity:1;}
+@media(hover:none){.cdel{opacity:1;}}
+
+/* RETROSPECTIVA */
+.retro-f{padding:12px 15px;border-bottom:1px solid var(--ln);display:flex;gap:8px;max-width:520px;margin:0 auto;}
+.retro-f input,.retro-f select{flex:1;background:var(--vm);border:1px solid var(--vc);border-radius:var(--r);color:var(--pa);font-family:'DM Mono',monospace;font-size:.72rem;padding:7px 10px;outline:none;-webkit-appearance:none;color-scheme:dark;cursor:pointer;}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:12px 15px;border-bottom:1px solid var(--ln);max-width:520px;margin:0 auto;}
+.sbox{background:var(--vm);border:1px solid var(--vc);border-radius:var(--r);padding:9px 10px;text-align:center;}
+.snum{font-family:'Bebas Neue',sans-serif;font-size:1.75rem;color:var(--tc);line-height:1;}
+.slbl{font-size:.52rem;letter-spacing:.18em;color:var(--cz);text-transform:uppercase;margin-top:1px;}
+
+/* TIMELINE */
+.tl{padding:15px 15px 15px 40px;display:flex;flex-direction:column;position:relative;max-width:520px;margin:0 auto;}
+.tl::before{content:'';position:absolute;left:26px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,transparent,var(--vc) 4%,var(--vc) 96%,transparent);}
+.tl-day{margin-bottom:18px;}
+.tl-dlbl{font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--tc);letter-spacing:.1em;margin-bottom:9px;margin-left:-24px;position:relative;}
+.tl-dlbl::before{content:'';position:absolute;left:-13px;top:50%;transform:translateY(-50%);width:9px;height:9px;border-radius:50%;background:var(--tr);border:2px solid var(--tc);box-shadow:0 0 7px rgba(196,154,42,.4);}
+.tl-c{background:var(--vm);border:1px solid var(--ln);border-radius:var(--r);padding:11px;margin-bottom:7px;position:relative;}
+.tl-c::before{content:'';position:absolute;left:-16px;top:13px;width:7px;height:1px;background:var(--vc);}
+.tl-tipo{font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;color:var(--tc);margin-bottom:3px;}
+.tl-talhao{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.06em;color:var(--pa);}
+.tl-desc{font-family:'Crimson Pro',serif;font-size:.88rem;color:var(--cr);line-height:1.5;margin-top:3px;}
+.tl-meta{margin-top:5px;font-size:.55rem;color:var(--cz);display:flex;gap:9px;flex-wrap:wrap;letter-spacing:.08em;}
+
+/* BTN EXCLUIR na timeline */
+.tl-del{
+  position:absolute;top:8px;right:8px;
+  background:rgba(224,90,90,.1);border:1px solid rgba(224,90,90,.25);border-radius:4px;
+  color:#e05a5a;font-size:.68rem;cursor:pointer;padding:2px 7px;
+  font-family:'DM Mono',monospace;
+  opacity:0;transition:opacity .2s;
+}
+.tl-c:hover .tl-del{opacity:1;}
+@media(hover:none){.tl-del{opacity:1;}}
+
+.retro-empty{padding:56px 24px;text-align:center;color:var(--cz);font-size:.72rem;line-height:1.9;letter-spacing:.06em;}
+
+/* MODAL */
+#modal-ov{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+#modal-ov.vis{opacity:1;pointer-events:all;}
+#modal-box{background:var(--vm);border:1px solid var(--vc);border-radius:14px 14px 0 0;width:100%;max-width:480px;padding:22px 20px 32px;transform:translateY(30px);transition:transform .25s;}
+#modal-ov.vis #modal-box{transform:translateY(0);}
+.m-icon{font-size:2rem;text-align:center;margin-bottom:10px;}
+.m-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.08em;color:var(--tc);text-align:center;margin-bottom:6px;}
+.m-msg{font-size:.73rem;color:var(--cz);text-align:center;line-height:1.65;margin-bottom:20px;letter-spacing:.06em;}
+.m-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mb{padding:12px;border:none;border-radius:var(--r);cursor:pointer;font-family:'DM Mono',monospace;font-size:.75rem;letter-spacing:.1em;transition:opacity .15s;}
+.mb:active{opacity:.75;}
+.mb-cancel{background:var(--vc);color:var(--pa);}
+.mb-confirm{background:#c0392b;color:#fff;}
+
+/* BTN INSTALAR */
+#btn-install{position:fixed;bottom:16px;right:16px;z-index:100;background:var(--tr);border:none;border-radius:50px;color:var(--pa);font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.12em;padding:10px 16px;cursor:pointer;display:none;align-items:center;gap:7px;box-shadow:0 4px 18px rgba(0,0,0,.45);animation:pulse 2.5s ease infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 4px 18px rgba(0,0,0,.45);}50%{box-shadow:0 4px 22px rgba(196,154,42,.5);}}
+
+/* BARRA AÇÕES HOJE */
+.hoje-actions{padding:10px 15px 4px;display:flex;gap:8px;max-width:520px;margin:0 auto;}
+.btn-wpp{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 14px;border:none;border-radius:var(--r);cursor:pointer;
+  background:#1fbe57;color:#fff;
+  font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.12em;
+  transition:background .15s,transform .1s;
+  font-weight:500;
+}
+.btn-wpp:active{background:#17a348;transform:scale(.97);}
+.btn-wpp svg{flex-shrink:0;}
+.btn-wpp-outline{
+  flex:none;display:flex;align-items:center;justify-content:center;
+  padding:11px 12px;border:1px solid var(--vc);border-radius:var(--r);cursor:pointer;
+  background:none;color:var(--vv);transition:background .15s,transform .1s;
+}
+.btn-wpp-outline:active{background:var(--vm);transform:scale(.97);}
+
+/* MODAL WHATSAPP */
+#modal-wpp .m-title{color:#1fbe57;}
+#modal-wpp .mb-wpp{background:#1fbe57;color:#fff;}
+#modal-wpp .mb-wpp:active{background:#17a348;}
+.wpp-preview{
+  background:var(--vd);border:1px solid var(--vc);border-radius:var(--r);
+  padding:12px;margin-bottom:16px;
+  font-size:.7rem;line-height:1.7;color:var(--pa);
+  white-space:pre-wrap;word-break:break-word;
+  max-height:220px;overflow-y:auto;
+  font-family:'DM Mono',monospace;letter-spacing:.04em;
+}
+.wpp-num-row{display:flex;gap:8px;margin-bottom:14px;}
+.wpp-num-row input{flex:1;background:var(--vm);border:1px solid var(--vc);border-radius:var(--r);color:var(--cr);font-family:'DM Mono',monospace;font-size:.78rem;padding:9px 11px;outline:none;color-scheme:dark;}
+.wpp-num-row input:focus{border-color:var(--tc);}
+.wpp-hint{font-size:.6rem;color:var(--cz);letter-spacing:.08em;margin-bottom:14px;line-height:1.55;}
+
+/* TOAST */
+#toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%) translateY(18px);background:var(--vc);color:var(--pa);font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.1em;padding:9px 18px;border-radius:6px;pointer-events:none;opacity:0;transition:all .3s;white-space:nowrap;z-index:600;}
+#toast.vis{opacity:1;transform:translateX(-50%) translateY(0);}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--vc);border-radius:99px;}
+
+/* BARRA AÇÕES HOJE */
+.hoje-actions{padding:10px 15px 2px;display:flex;gap:8px;max-width:520px;margin:0 auto;}
+.btn-wpp{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 14px;border:none;border-radius:var(--r);cursor:pointer;
+  background:#25d366;color:#fff;
+  font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.1em;
+  transition:background .15s,transform .1s;font-weight:500;
+}
+.btn-wpp:active{background:#1ebe5d;transform:scale(.97);}
+.btn-copy{
+  flex:none;display:flex;align-items:center;justify-content:center;
+  padding:11px 13px;border:1px solid var(--vc);border-radius:var(--r);
+  background:none;color:var(--vv);cursor:pointer;transition:background .15s,transform .1s;
+}
+.btn-copy:active{background:var(--vm);transform:scale(.97);}
+/* MODAL WPP */
+#modal-wpp .m-title{color:#25d366;}
+#modal-wpp .mb-send{background:#25d366;color:#fff;}
+#modal-wpp .mb-send:active{background:#1ebe5d;}
+.wpp-preview{
+  background:var(--vd);border:1px solid var(--vc);border-radius:var(--r);
+  padding:11px;margin-bottom:12px;
+  font-size:.68rem;line-height:1.75;color:var(--pa);
+  white-space:pre-wrap;word-break:break-word;
+  max-height:200px;overflow-y:auto;font-family:'DM Mono',monospace;
+}
+.wpp-lbl{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--vv);margin-bottom:5px;}
+.wpp-row{display:flex;gap:8px;margin-bottom:10px;}
+.wpp-row input{
+  flex:1;background:var(--vm);border:1px solid var(--vc);border-radius:var(--r);
+  color:var(--cr);font-family:'DM Mono',monospace;font-size:.78rem;
+  padding:9px 11px;outline:none;color-scheme:dark;
+}
+.wpp-row input:focus{border-color:var(--tc);}
+.wpp-hint{font-size:.6rem;color:var(--cz);letter-spacing:.06em;margin-bottom:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div style="font-size:2.8rem">🌾</div>
+  <div class="st">DIÁRIO<br>DE CAMPO</div>
+  <div class="ss">Registro Agronômico</div>
+  <div class="sb"><div class="sf"></div></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="app-title">Diário de Campo<small>SISTEMA DE REGISTRO</small></div>
+    <div class="today-badge" id="todayBadge">—</div>
+  </header>
+
+  <div class="tabs">
+    <button class="tb on" onclick="switchTab('novo',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Novo
+    </button>
+    <button class="tb" onclick="switchTab('hoje',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Hoje
+    </button>
+    <button class="tb" onclick="switchTab('retro',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Histórico
+    </button>
+  </div>
+
+  <div class="content">
+
+    <!-- NOVO -->
+    <div class="panel on" id="panel-novo">
+      <div class="fsec">
+        <div class="fg">
+          <div class="lbl">📅 Data do registro</div>
+          <input type="date" id="fData" class="fi" style="width:100%">
+        </div>
+        <div class="row2">
+          <div class="fg">
+            <div class="lbl">🗂 Tipo de atividade</div>
+            <select class="fs" id="fTipo">
+              <option value="">Selecione...</option>
+              <option>Pulverização</option><option>Plantio</option><option>Colheita</option>
+              <option>Adubação</option><option>Irrigação</option><option>Manejo de Solo</option>
+              <option>Monitoramento</option><option>Manutenção</option>
+              <option>Visita Técnica</option><option>Amostragem</option><option>Outro</option>
+            </select>
+          </div>
+          <div class="fg">
+            <div class="lbl">🌿 Talhão / Área</div>
+            <input type="text" class="fi" id="fTalhao" placeholder="Ex: T-04, Gleba A">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="fg">
+            <div class="lbl">👤 Responsável</div>
+            <input type="text" class="fi" id="fResp" placeholder="Nome">
+          </div>
+          <div class="fg">
+            <div class="lbl">📐 Área (ha)</div>
+            <input type="number" class="fi" id="fArea" placeholder="0.00" step="0.01">
+          </div>
+        </div>
+        <div class="fg">
+          <div class="lbl">📝 Descrição / Observações</div>
+          <textarea class="fa" id="fDesc" placeholder="Atividade, produto aplicado, equipamento, condições de campo..."></textarea>
+        </div>
+        <div class="fg">
+          <div class="lbl">⛅ Condição climática</div>
+          <div class="chips" id="climaChips">
+            <button class="chip" data-v="☀️ Ensolarado">☀️ Ensolarado</button>
+            <button class="chip" data-v="⛅ Nublado">⛅ Nublado</button>
+            <button class="chip" data-v="🌧 Chuvoso">🌧 Chuvoso</button>
+            <button class="chip" data-v="🌫 Neblina">🌫 Neblina</button>
+            <button class="chip" data-v="💨 Ventoso">💨 Ventoso</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="fg">
+            <div class="lbl">🌡 Temperatura (°C)</div>
+            <input type="number" class="fi" id="fTemp" placeholder="--">
+          </div>
+          <div class="fg">
+            <div class="lbl">💧 Umidade (%)</div>
+            <input type="number" class="fi" id="fUmid" placeholder="--">
+          </div>
+        </div>
+        <div class="fg">
+          <div class="lbl">🏡 Fazenda / Unidade</div>
+          <input type="text" class="fi" id="fFazenda" placeholder="Nome da fazenda">
+        </div>
+        <button class="bts" onclick="salvarRegistro()">SALVAR REGISTRO</button>
+        <div style="height:22px"></div>
+      </div>
+    </div>
+
+    <!-- HOJE -->
+    <div class="panel" id="panel-hoje">
+      <div class="hoje-hd">
+        <div class="hoje-dt" id="hojeDataLabel">—</div>
+        <div class="hoje-sub" id="hojeSubLabel">Registros de hoje</div>
+      </div>
+      <div class="hoje-actions" id="hojeActions" style="display:none">
+        <button class="btn-wpp" onclick="abrirModalWpp()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.125.558 4.122 1.532 5.857L.054 23.25a.75.75 0 00.916.916l5.393-1.478A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.714 9.714 0 01-4.976-1.368l-.356-.214-3.696 1.012 1.012-3.696-.214-.356A9.714 9.714 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
+          ENVIAR POR WHATSAPP
+        </button>
+        <button class="btn-copy" onclick="copiarRelatorio()" title="Copiar relatório">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+      </div>
+      <div id="hojeConteudo"></div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="panel" id="panel-retro">
+      <div class="retro-f">
+        <input type="month" id="fMes" onchange="renderRetro()" title="Filtrar por mês">
+        <select id="fFiltroTipo" onchange="renderRetro()">
+          <option value="">Todos os tipos</option>
+          <option>Pulverização</option><option>Plantio</option><option>Colheita</option>
+          <option>Adubação</option><option>Irrigação</option><option>Manejo de Solo</option>
+          <option>Monitoramento</option><option>Manutenção</option>
+          <option>Visita Técnica</option><option>Amostragem</option><option>Outro</option>
+        </select>
+      </div>
+      <div class="stats">
+        <div class="sbox"><div class="snum" id="stTotal">0</div><div class="slbl">Registros</div></div>
+        <div class="sbox"><div class="snum" id="stArea">0</div><div class="slbl">Hectares</div></div>
+        <div class="sbox"><div class="snum" id="stDias">0</div><div class="slbl">Dias Campo</div></div>
+      </div>
+      <div id="retroConteudo"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL WHATSAPP -->
+<div id="modal-wpp" style="position:fixed;inset:0;z-index:810;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;" onclick="fecharModalWpp()">
+  <div style="background:var(--vm);border:1px solid var(--vc);border-radius:14px 14px 0 0;width:100%;max-width:480px;padding:20px 18px 30px;transform:translateY(30px);transition:transform .25s;" onclick="event.stopPropagation()" id="modal-wpp-box">
+    <div class="m-icon">💬</div>
+    <div class="m-title">RELATÓRIO VIA WHATSAPP</div>
+    <div style="height:10px"></div>
+    <div class="wpp-lbl">Prévia do relatório</div>
+    <div class="wpp-preview" id="wppPreview"></div>
+    <div class="wpp-lbl">Número (opcional)</div>
+    <div class="wpp-row">
+      <input type="tel" id="wppNumero" placeholder="Ex: 5567999990000 (com DDI+DDD)">
+    </div>
+    <div class="wpp-hint">Deixe em branco para abrir o WhatsApp e escolher o contato manualmente.</div>
+    <div class="m-btns">
+      <button class="mb mb-cancel" onclick="fecharModalWpp()">CANCELAR</button>
+      <button class="mb mb-send" onclick="enviarWpp()">ABRIR WHATSAPP</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-ov" onclick="modalClose()">
+  <div id="modal-box" onclick="event.stopPropagation()">
+    <div class="m-icon">🗑</div>
+    <div class="m-title">EXCLUIR REGISTRO?</div>
+    <div class="m-msg" id="mMsg">Esta ação não pode ser desfeita.</div>
+    <div class="m-btns">
+      <button class="mb mb-cancel" onclick="modalClose()">CANCELAR</button>
+      <button class="mb mb-confirm" id="mConfirm">EXCLUIR</button>
+    </div>
+  </div>
+</div>
+
+<!-- BTN INSTALAR -->
+<button id="btn-install" onclick="installApp()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v12M7 12l5 5 5-5M2 18v2a2 2 0 002 2h16a2 2 0 002-2v-2"/></svg>
+  INSTALAR APP
+</button>
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════
+   SERVICE WORKER INLINE
+══════════════════════ */
+const SW_SRC=`
+const CACHE='dc-v3';
+self.addEventListener('install',e=>{self.skipWaiting();});
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch',e=>{
+  if(e.request.method!=='GET')return;
+  e.respondWith(
+    caches.match(e.request).then(cached=>{
+      const net=fetch(e.request).then(res=>{
+        if(res&&res.status===200){const c=res.clone();caches.open(CACHE).then(cx=>cx.put(e.request,c));}
+        return res;
+      }).catch(()=>cached);
+      return cached||net;
+    })
+  );
+});`;
+
+if('serviceWorker' in navigator){
+  const b=new Blob([SW_SRC],{type:'text/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(b),{scope:location.pathname})
+    .catch(()=>{});
+}
+
+/* ══════════════════════
+   ESTADO
+══════════════════════ */
+let regs=JSON.parse(localStorage.getItem('dc_v3')||'[]');
+let climaSel='';
+let deferredInstall=null;
+let pendingId=null;
+
+/* ══════════════════════
+   INIT
+══════════════════════ */
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    const sp=document.getElementById('splash');
+    sp.style.opacity='0';
+    setTimeout(()=>{sp.remove();document.getElementById('app').classList.add('vis');},500);
+  },1900);
+  const h=todayISO();
+  document.getElementById('fData').value=h;
+  document.getElementById('todayBadge').textContent=fmtS(h);
+  document.getElementById('hojeDataLabel').textContent=fmtL(h);
+  document.getElementById('fMes').value=h.slice(0,7);
+  document.querySelectorAll('#climaChips .chip').forEach(c=>{
+    c.addEventListener('click',()=>{
+      document.querySelectorAll('#climaChips .chip').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on'); climaSel=c.dataset.v;
+    });
+  });
+  renderHoje(); renderRetro();
+});
+
+/* PWA install */
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredInstall=e;
+  const b=document.getElementById('btn-install');
+  b.style.display='flex';
+});
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('btn-install').style.display='none';
+  showToast('✓ App instalado!');
+});
+function installApp(){
+  if(!deferredInstall){showToast('Menu do navegador → "Adicionar à tela inicial"');return;}
+  deferredInstall.prompt();
+  deferredInstall.userChoice.then(r=>{
+    if(r.outcome==='accepted')showToast('✓ Instalando...');
+    deferredInstall=null;
+    document.getElementById('btn-install').style.display='none';
+  });
+}
+
+/* ══════════════════════
+   TABS
+══════════════════════ */
+function switchTab(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('panel-'+name).classList.add('on');
+  if(btn)btn.classList.add('on');
+  if(name==='hoje')renderHoje();
+  if(name==='retro')renderRetro();
+}
+
+/* ══════════════════════
+   SALVAR
+══════════════════════ */
+function salvarRegistro(){
+  const data=document.getElementById('fData').value;
+  const tipo=document.getElementById('fTipo').value;
+  const talhao=document.getElementById('fTalhao').value.trim();
+  const resp=document.getElementById('fResp').value.trim();
+  const area=parseFloat(document.getElementById('fArea').value)||0;
+  const desc=document.getElementById('fDesc').value.trim();
+  const temp=document.getElementById('fTemp').value;
+  const umid=document.getElementById('fUmid').value;
+  const fazenda=document.getElementById('fFazenda').value.trim();
+  if(!data)return showToast('⚠ Informe a data');
+  if(!tipo)return showToast('⚠ Selecione o tipo');
+  if(!talhao)return showToast('⚠ Informe o talhão');
+  if(!desc)return showToast('⚠ Adicione uma descrição');
+  regs.unshift({id:Date.now(),data,tipo,talhao,resp,area,desc,
+    clima:climaSel,
+    temp:temp?parseFloat(temp):null,
+    umid:umid?parseFloat(umid):null,
+    fazenda,
+    hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+  });
+  salvarLocal(); limparForm();
+  showToast('✓ Registro salvo!');
+  switchTab('hoje',document.querySelectorAll('.tb')[1]);
+}
+
+function limparForm(){
+  ['fTipo','fTalhao','fResp','fArea','fDesc','fTemp','fUmid'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('#climaChips .chip').forEach(c=>c.classList.remove('on'));
+  climaSel='';
+}
+
+/* ══════════════════════
+   RENDER HOJE
+══════════════════════ */
+function renderHoje(){
+  const d=document.getElementById('fData').value||todayISO();
+  const reg=regs.filter(r=>r.data===d);
+  document.getElementById('hojeDataLabel').textContent=fmtL(d);
+  document.getElementById('hojeSubLabel').textContent=
+    reg.length?`${reg.length} registro${reg.length>1?'s':''} neste dia`:'Nenhum registro ainda';
+  const cont=document.getElementById('hojeConteudo');
+  const act=document.getElementById('hojeActions');
+  if(!reg.length){
+    act.style.display='none';
+    cont.innerHTML=`<div class="empty"><div class="ei">📋</div><p>Nenhum registro para hoje.<br>Use a aba <strong>Novo</strong> para adicionar.</p></div>`;
+    return;
+  }
+  act.style.display='flex';
+  cont.innerHTML=`<div class="clist">${reg.map(cardHTML).join('')}</div>`;
+}
+
+function cardHTML(r){
+  return `<div class="card" id="c${r.id}">
+    <button class="cdel" onclick="confirmar(${r.id})">✕ Excluir</button>
+    <div class="card-hd"><span class="ctipo">${r.tipo}</span><span class="chora">${r.hora||''}</span></div>
+    <div class="ctalhao">${r.talhao}${r.fazenda?' — '+r.fazenda:''}</div>
+    <div class="cdesc">${r.desc}</div>
+    <div class="cmeta">
+      ${r.resp?`<span>👤 ${r.resp}</span>`:''}
+      ${r.area?`<span>📐 ${r.area} ha</span>`:''}
+      ${r.clima?`<span>${r.clima}</span>`:''}
+      ${r.temp!==null?`<span>🌡 ${r.temp}°C</span>`:''}
+      ${r.umid!==null?`<span>💧 ${r.umid}%</span>`:''}
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════
+   RENDER RETROSPECTIVA
+══════════════════════ */
+function renderRetro(){
+  const mes=document.getElementById('fMes').value;
+  const tipo=document.getElementById('fFiltroTipo').value;
+  let f=regs.filter(r=>r.data.startsWith(mes));
+  if(tipo)f=f.filter(r=>r.tipo===tipo);
+  const totalArea=f.reduce((s,r)=>s+(r.area||0),0);
+  const dias=new Set(f.map(r=>r.data)).size;
+  document.getElementById('stTotal').textContent=f.length;
+  document.getElementById('stArea').textContent=totalArea.toFixed(1);
+  document.getElementById('stDias').textContent=dias;
+  const cont=document.getElementById('retroConteudo');
+  if(!f.length){cont.innerHTML=`<div class="retro-empty">📭 Nenhum registro<br>para o período selecionado.</div>`;return;}
+  const byDate={};
+  f.forEach(r=>{(byDate[r.data]=byDate[r.data]||[]).push(r);});
+  const datas=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  cont.innerHTML=`<div class="tl">`+datas.map(d=>`
+    <div class="tl-day">
+      <div class="tl-dlbl">${fmtL(d)}</div>
+      ${byDate[d].map(r=>`
+        <div class="tl-c">
+          <button class="tl-del" onclick="confirmar(${r.id})">✕ Excluir</button>
+          <div class="tl-tipo">${r.tipo}</div>
+          <div class="tl-talhao">${r.talhao}${r.fazenda?' · '+r.fazenda:''}</div>
+          <div class="tl-desc">${r.desc}</div>
+          <div class="tl-meta">
+            ${r.resp?`<span>👤 ${r.resp}</span>`:''}
+            ${r.area?`<span>📐 ${r.area} ha</span>`:''}
+            ${r.clima?`<span>${r.clima}</span>`:''}
+            ${r.temp!==null?`<span>🌡 ${r.temp}°C</span>`:''}
+            ${r.umid!==null?`<span>💧 ${r.umid}%</span>`:''}
+            ${r.hora?`<span>🕐 ${r.hora}</span>`:''}
+          </div>
+        </div>`).join('')}
+    </div>`).join('')+`</div>`;
+}
+
+/* ══════════════════════
+   MODAL EXCLUSÃO
+══════════════════════ */
+function confirmar(id){
+  pendingId=id;
+  const r=regs.find(x=>x.id===id);
+  document.getElementById('mMsg').textContent=
+    r?`"${r.tipo} — ${r.talhao}" em ${fmtS(r.data)}. Esta ação não pode ser desfeita.`
+     :'Esta ação não pode ser desfeita.';
+  document.getElementById('mConfirm').onclick=executar;
+  document.getElementById('modal-ov').classList.add('vis');
+}
+function executar(){
+  if(pendingId===null)return;
+  regs=regs.filter(r=>r.id!==pendingId);
+  pendingId=null;
+  salvarLocal(); modalClose();
+  showToast('Registro excluído');
+  renderHoje(); renderRetro();
+}
+function modalClose(){
+  document.getElementById('modal-ov').classList.remove('vis');
+  pendingId=null;
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')modalClose();});
+
+
+/* ══════════════════════
+   WHATSAPP
+══════════════════════ */
+function montarRelatorio(){
+  const d=document.getElementById('fData').value||todayISO();
+  const reg=regs.filter(r=>r.data===d);
+  if(!reg.length) return null;
+  const fazenda=reg[0].fazenda||'—';
+  const totalArea=reg.reduce((s,r)=>s+(r.area||0),0);
+  let txt='';
+  txt+='🌾 *DIÁRIO DE CAMPO*\n';
+  txt+=`📅 ${fmtL(d)}\n`;
+  txt+=`🏡 ${fazenda}\n`;
+  txt+='━━━━━━━━━━━━━━━━━━\n\n';
+  reg.forEach((r,i)=>{
+    txt+=`*[${i+1}] ${r.tipo.toUpperCase()}*\n`;
+    txt+=`📍 Talhão: ${r.talhao}\n`;
+    if(r.resp) txt+=`👤 Resp.: ${r.resp}\n`;
+    if(r.area) txt+=`📐 Área: ${r.area} ha\n`;
+    txt+=`📝 ${r.desc}\n`;
+    const meta=[];
+    if(r.clima) meta.push(r.clima);
+    if(r.temp!==null) meta.push(`🌡 ${r.temp}°C`);
+    if(r.umid!==null) meta.push(`💧 ${r.umid}%`);
+    if(meta.length) txt+=meta.join('  ')+'\n';
+    if(r.hora) txt+=`🕐 ${r.hora}\n`;
+    txt+='\n';
+  });
+  txt+='━━━━━━━━━━━━━━━━━━\n';
+  txt+=`📊 Total: ${reg.length} atividade${reg.length>1?'s':''}`;
+  if(totalArea>0) txt+=` · ${totalArea.toFixed(1)} ha`;
+  txt+='\n';
+  txt+='_Gerado pelo Diário de Campo_';
+  return txt;
+}
+
+function abrirModalWpp(){
+  const txt=montarRelatorio();
+  if(!txt){showToast('⚠ Nenhum registro para enviar');return;}
+  document.getElementById('wppPreview').textContent=txt.replace(/\*/g,'').replace(/_/g,'');
+  const ov=document.getElementById('modal-wpp');
+  ov.style.opacity='1'; ov.style.pointerEvents='all';
+  document.getElementById('modal-wpp-box').style.transform='translateY(0)';
+}
+
+function fecharModalWpp(){
+  const ov=document.getElementById('modal-wpp');
+  ov.style.opacity='0'; ov.style.pointerEvents='none';
+  document.getElementById('modal-wpp-box').style.transform='translateY(30px)';
+}
+
+function enviarWpp(){
+  const txt=montarRelatorio();
+  if(!txt) return;
+  const num=document.getElementById('wppNumero').value.replace(/\D/g,'');
+  const encoded=encodeURIComponent(txt);
+  const url=num
+    ? `https://wa.me/${num}?text=${encoded}`
+    : `https://wa.me/?text=${encoded}`;
+  window.open(url,'_blank');
+  fecharModalWpp();
+}
+
+function copiarRelatorio(){
+  const txt=montarRelatorio();
+  if(!txt){showToast('⚠ Nenhum registro para copiar');return;}
+  const plain=txt.replace(/\*/g,'').replace(/_/g,'');
+  navigator.clipboard.writeText(plain)
+    .then(()=>showToast('✓ Relatório copiado!'))
+    .catch(()=>showToast('⚠ Erro ao copiar'));
+}
+/* ══════════════════════
+   UTILS
+══════════════════════ */
+function salvarLocal(){localStorage.setItem('dc_v3',JSON.stringify(regs));}
+function todayISO(){return new Date().toLocaleDateString('sv-SE');}
+function fmtL(iso){
+  if(!iso)return'—';
+  const[y,m,d]=iso.split('-');
+  const M=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const S=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  return`${S[new Date(y,m-1,d).getDay()]}, ${d} ${M[m-1]} ${y}`;
+}
+function fmtS(iso){
+  if(!iso)return'—';
+  const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('vis');
+  setTimeout(()=>t.classList.remove('vis'),2800);
+}
+
+/* ══════════════════════
+   DADOS DEMO
+══════════════════════ */
+if(!regs.length){
+  const h=todayISO(),[y,m,d]=h.split('-');
+  const on=new Date(y,m-1,+d-1).toLocaleDateString('sv-SE');
+  const an=new Date(y,m-1,+d-3).toLocaleDateString('sv-SE');
+  regs=[
+    {id:1,data:h,tipo:'Pulverização',talhao:'T-03 Norte',resp:'Orlando Vieira',area:42.5,
+      desc:'Aplicação de herbicida pós-emergente (Roundup 2,5 L/ha). Barra 24m, velocidade 8 km/h.',
+      clima:'☀️ Ensolarado',temp:28,umid:62,fazenda:'Fazenda Boa Vista',hora:'06:45'},
+    {id:2,data:h,tipo:'Monitoramento',talhao:'T-01 Sede',resp:'Thiago Meneses',area:18,
+      desc:'Infestação de lagarta-do-cartucho acima do NC em 3 pontos. Recomendado inseticida.',
+      clima:'☀️ Ensolarado',temp:29,umid:58,fazenda:'Fazenda Boa Vista',hora:'09:30'},
+    {id:3,data:on,tipo:'Adubação',talhao:'T-02 Sul',resp:'Marcos Leal',area:35,
+      desc:'Adubação de cobertura com ureia 200 kg/ha. Distribuidor Valtra. Solo seco.',
+      clima:'⛅ Nublado',temp:24,umid:71,fazenda:'Fazenda Boa Vista',hora:'07:15'},
+    {id:4,data:an,tipo:'Plantio',talhao:'T-04 Gleba B',resp:'João Divino',area:28,
+      desc:'Semeadura soja var. TMG7062. Espaçamento 0,45m, 12 sem/m. Pop. estimado 250k/ha.',
+      clima:'⛅ Nublado',temp:22,umid:78,fazenda:'Fazenda Boa Vista',hora:'05:50'},
+  ];
+  salvarLocal();
+}
+</script>
+</body>
+</html>
